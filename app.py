@@ -284,6 +284,6 @@ async def predict(payload: PredictBody):
 handler = app
 
 # For local testing
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=8000, reload=True)
+# if __name__ == "__main__":
+#     import uvicorn
+#     uvicorn.run(app, host="127.0.0.1", port=8000, reload=True)
