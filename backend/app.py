@@ -309,7 +309,7 @@ async def predict(payload: PredictBody):
         logger.error(traceback.format_exc())
         return JSONResponse(status_code=500, content={"error": "Internal server error occurred"})
 
-if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=8000, reload=True)
+# if __name__ == "__main__":
+#     uvicorn.run(app, host="127.0.0.1", port=8000, reload=True)
 
-app = app
+handler = app
