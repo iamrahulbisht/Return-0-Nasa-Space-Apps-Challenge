@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Researcher Dashboard - ExoProspector</title>
+    <link rel="stylesheet" href="dashboard-style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="space-bg"></div>
+    <div class="nebula"></div>
+    <div class="stars" id="stars"></div>
+
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo">
+                <span class="logo-icon">🪐</span>
+                <span class="logo-text">ExoProspector</span>
+            </div>
+            <div class="nav-links">
+                <a href="dashboard.html">🚀 Predict</a>
+                <a href="my-predictions.html">📊 My Predictions</a>
+                <a href="researcher-dashboard.html" class="active">🔬 Research</a>
+                <div class="user-menu">
+                    <span class="user-name">Dr. Sarah Chen</span>
+                    <button class="btn-logout" onclick="logout()">Logout</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <section class="hero-section">
+            <h1 class="page-title">🔬 Researcher Dashboard</h1>
+            <p class="page-subtitle">Model performance, analytics, and data exploration</p>
+        </section>
+
+        <!-- Metrics Cards -->
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-icon">🎯</div>
+                <div class="metric-data">
+                    <h3>92.5%</h3>
+                    <p>Model Accuracy</p>
+                    <span class="metric-change positive">+2.3% vs last week</span>
+                </div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-icon">⭐</div>
+                <div class="metric-data">
+                    <h3>4.6/5</h3>
+                    <p>Avg Rating</p>
+                    <span class="metric-change positive">+0.2 vs last week</span>
+                </div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-icon">📊</div>
+                <div class="metric-data">
+                    <h3>1,247</h3>
+                    <p>Total Predictions</p>
+                    <span class="metric-change positive">+156 this week</span>
+                </div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-icon">💬</div>
+                <div class="metric-data">
+                    <h3>68%</h3>
+                    <p>Feedback Coverage</p>
+                    <span class="metric-change neutral">+5% vs last week</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="charts-grid">
+            <!-- Accuracy Trend -->
+            <div class="card chart-card">
+                <div class="card-header">
+                    <h2>📈 Accuracy Trend</h2>
+                    <select class="chart-filter">
+                        <option>Last 7 days</option>
+                        <option>Last 30 days</option>
+                        <option>Last 3 months</option>
+                    </select>
+                </div>
+                <div class="card-body">
+                    <canvas id="accuracyChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Confidence Distribution -->
+            <div class="card chart-card">
+                <div class="card-header">
+                    <h2>📊 Confidence Distribution</h2>
+                </div>
+                <div class="card-body">
+                    <canvas id="confidenceChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Feature Importance & Error Analysis -->
+        <div class="charts-grid">
+            <div class="card chart-card">
+                <div class="card-header">
+                    <h2>🔍 Feature-wise Errors</h2>
+                </div>
+                <div class="card-body">
+                    <canvas id="errorChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card chart-card">
+                <div class="card-header">
+                    <h2>📉 Calibration Plot</h2>
+                </div>
+                <div class="card-body">
+                    <canvas id="calibrationChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Explorer -->
+        <div class="card">
+            <div class="card-header">
+                <h2>🗂️ Data Explorer</h2>
+                <div class="header-actions">
+                    <button class="btn-secondary" onclick="exportMisclassified()">
+                        📥 Export Errors
+                    </button>
+                    <button class="btn-secondary" onclick="exportWithFeedback()">
+                        📥 Export w/ Feedback
+                    </button>
+                    <button class="btn-primary" onclick="exportAll()">
+                        📥 Export All
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="explorer-filters">
+                    <input type="date" id="startDate" placeholder="Start Date">
+                    <input type="date" id="endDate" placeholder="End Date">
+                    <select id="confidenceFilter">
+                        <option>All Confidence</option>
+                        <option>High (>80%)</option>
+                        <option>Medium (50-80%)</option>
+                        <option>Low (<50%)</option>
+                    </select>
+                    <select id="errorFilter">
+                        <option>All Predictions</option>
+                        <option>Correct Only</option>
+                        <option>Errors Only</option>
+                    </select>
+                    <button class="btn-primary" onclick="filterData()">🔍 Filter</button>
+                </div>
+
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Date</th>
+                                <th>Input</th>
+                                <th>Prediction</th>
+                                <th>Confidence</th>
+                                <th>Feedback</th>
+                                <th>User Tag</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dataTableBody">
+                            <tr>
+                                <td>#1247</td>
+                                <td>2025-10-04</td>
+                                <td><button class="btn-text" onclick="showInputs(1247)">View</button></td>
+                                <td><span class="badge badge-success">Habitable</span></td>
+                                <td>87%</td>
+                                <td>✓ Correct</td>
+                                <td>user_789</td>
+                            </tr>
+                            <tr>
+                                <td>#1246</td>
+                                <td>2025-10-04</td>
+                                <td><button class="btn-text" onclick="showInputs(1246)">View</button></td>
+                                <td><span class="badge badge-danger">Non-habitable</span></td>
+                                <td>92%</td>
+                                <td>✗ Wrong</td>
+                                <td>user_456</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Model Card -->
+        <div class="card">
+            <div class="card-header">
+                <h2>🤖 Model Card</h2>
+            </div>
+            <div class="card-body">
+                <div class="model-info-grid">
+                    <div class="model-info-item">
+                        <h4>Model Version</h4>
+                        <p>v2.3.1</p>
+                    </div>
+                    <div class="model-info-item">
+                        <h4>Training Date</h4>
+                        <p>2025-09-15</p>
+                    </div>
+                    <div class="model-info-item">
+                        <h4>Dataset</h4>
+                        <p>NASA Kepler (5,600 exoplanets)</p>
+                    </div>
+                    <div class="model-info-item">
+                        <h4>Algorithm</h4>
+                        <p>Random Forest Classifier</p>
+                    </div>
+                    <div class="model-info-item">
+                        <h4>Training Accuracy</h4>
+                        <p>94.2%</p>
+                    </div>
+                    <div class="model-info-item">
+                        <h4>Test Accuracy</h4>
+                        <p>92.5%</p>
+                    </div>
+                </div>
+
+                <div class="model-features">
+                    <h4>Top Features</h4>
+                    <ul>
+                        <li>Star Temperature (25%)</li>
+                        <li>Orbital Period (22%)</li>
+                        <li>Planet Radius (18%)</li>
+                        <li>Distance from Star (15%)</li>
+                        <li>Star Mass (12%)</li>
+                        <li>Star Radius (8%)</li>
+                    </ul>
+                </div>
+
+                <div class="model-limitations">
+                    <h4>Known Limitations</h4>
+                    <ul>
+                        <li>Lower accuracy for M-dwarf stars (<78%)</li>
+                        <li>Unreliable for orbital periods >5000 days</li>
+                        <li>Limited atmospheric composition data</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Retrain Tools -->
+        <div class="card">
+            <div class="card-header">
+                <h2>🔄 Retraining Tools</h2>
+            </div>
+            <div class="card-body">
+                <div class="retrain-grid">
+                    <div class="retrain-option">
+                        <h4>📊 Export Training Data</h4>
+                        <p>Download all predictions with feedback for model retraining</p>
+                        <button class="btn-primary" onclick="exportTrainingData()">
+                            Download Dataset
+                        </button>
+                    </div>
+                    <div class="retrain-option">
+                        <h4>❌ Export Misclassified</h4>
+                        <p>Download only incorrect predictions for error analysis</p>
+                        <button class="btn-secondary" onclick="exportErrors()">
+                            Download Errors
+                        </button>
+                    </div>
+                    <div class="retrain-option">
+                        <h4>📈 Model Comparison</h4>
+                        <p>Compare current model with previous versions</p>
+                        <button class="btn-secondary" onclick="compareModels()">
+                            View Comparison
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="dashboard.js"></script>
+    <script src="charts.js"></script>
+</body>
+</html>

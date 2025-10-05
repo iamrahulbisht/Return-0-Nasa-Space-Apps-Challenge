@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ExoProspector - Prediction Dashboard</title>
+    <link rel="stylesheet" href="dashboard-style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <!-- Space Background -->
+    <div class="space-bg"></div>
+    <div class="nebula"></div>
+    <div class="stars" id="stars"></div>
+
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo">
+                <span class="logo-icon">🪐</span>
+                <span class="logo-text">ExoProspector</span>
+            </div>
+            <div class="nav-links">
+                <a href="dashboard.html" class="active">🚀 Predict</a>
+                <a href="my-predictions.html">📊 My Predictions</a>
+                <a href="researcher-dashboard.html" id="researcherLink" style="display: none;">🔬 Research</a>
+                <div class="user-menu">
+                    <span class="user-name" id="userName">John Doe</span>
+                    <button class="btn-logout" onclick="logout()">Logout</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container">
+        <!-- Hero Section -->
+        <section class="hero-section">
+            <h1 class="page-title">🔭 Exoplanet Prediction</h1>
+            <p class="page-subtitle">Enter stellar parameters to predict exoplanet characteristics</p>
+        </section>
+
+        <!-- Main Grid -->
+        <div class="dashboard-grid">
+            <!-- Left: Input Form -->
+            <div class="card form-card">
+                <div class="card-header">
+                    <h2>📝 Input Parameters</h2>
+                    <div class="sample-presets">
+                        <button class="btn-preset" onclick="loadSample(1)">Sample 1</button>
+                        <button class="btn-preset" onclick="loadSample(2)">Sample 2</button>
+                        <button class="btn-preset" onclick="loadSample(3)">Sample 3</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <form id="predictionForm">
+                        <div class="form-group">
+                            <label for="starTemp">Star Temperature (K)</label>
+                            <input type="number" id="starTemp" required placeholder="e.g., 5778">
+                            <span class="field-hint">Range: 2000 - 10000 K</span>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="starRadius">Star Radius (Solar Radii)</label>
+                            <input type="number" step="0.01" id="starRadius" required placeholder="e.g., 1.0">
+                            <span class="field-hint">Range: 0.1 - 100 R☉</span>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="starMass">Star Mass (Solar Masses)</label>
+                            <input type="number" step="0.01" id="starMass" required placeholder="e.g., 1.0">
+                            <span class="field-hint">Range: 0.1 - 100 M☉</span>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="orbitalPeriod">Orbital Period (Days)</label>
+                            <input type="number" step="0.01" id="orbitalPeriod" required placeholder="e.g., 365.25">
+                            <span class="field-hint">Range: 0.1 - 10000 days</span>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="planetRadius">Planet Radius (Earth Radii)</label>
+                            <input type="number" step="0.01" id="planetRadius" required placeholder="e.g., 1.0">
+                            <span class="field-hint">Range: 0.1 - 50 R⊕</span>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="distance">Distance from Star (AU)</label>
+                            <input type="number" step="0.01" id="distance" required placeholder="e.g., 1.0">
+                            <span class="field-hint">Range: 0.01 - 100 AU</span>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="submit" class="btn-primary" id="predictBtn">
+                                🔮 Predict Habitability
+                            </button>
+                            <button type="button" class="btn-secondary" onclick="resetForm()">
+                                ↻ Reset
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Right: Result Panel -->
+            <div class="card result-card">
+                <div class="card-header">
+                    <h2>📊 Prediction Result</h2>
+                </div>
+                <div class="card-body">
+                    <!-- Initial State -->
+                    <div id="resultEmpty" class="result-empty">
+                        <div class="empty-icon">🌌</div>
+                        <p>Enter parameters and click predict to see results</p>
+                    </div>
+
+                    <!-- Result Display -->
+                    <div id="resultDisplay" style="display: none;">
+                        <div class="result-status" id="resultStatus">
+                            <div class="status-icon" id="statusIcon">🌍</div>
+                            <h3 id="statusText">Potentially Habitable</h3>
+                        </div>
+
+                        <!-- Confidence Meter -->
+                        <div class="confidence-section">
+                            <div class="confidence-label">
+                                <span>Confidence</span>
+                                <span id="confidenceValue">85%</span>
+                            </div>
+                            <div class="confidence-bar">
+                                <div class="confidence-fill" id="confidenceFill"></div>
+                            </div>
+                        </div>
+
+                        <!-- Feature Importance -->
+                        <div class="features-section">
+                            <h4>🔍 Key Factors</h4>
+                            <div class="feature-list" id="featureList">
+                                <!-- Dynamic features will be inserted here -->
+                            </div>
+                        </div>
+
+                        <!-- Feedback Widget -->
+                        <div class="feedback-widget" id="feedbackWidget">
+                            <h4>💬 Was this prediction accurate?</h4>
+                            <div class="feedback-actions">
+                                <button class="btn-feedback yes" onclick="submitFeedback(true)">
+                                    ✓ Yes
+                                </button>
+                                <button class="btn-feedback no" onclick="submitFeedback(false)">
+                                    ✗ No
+                                </button>
+                            </div>
+                            
+                            <div class="rating-section" id="ratingSection" style="display: none;">
+                                <p>Rate this prediction:</p>
+                                <div class="star-rating">
+                                    <span class="star" onclick="setRating(1)">⭐</span>
+                                    <span class="star" onclick="setRating(2)">⭐</span>
+                                    <span class="star" onclick="setRating(3)">⭐</span>
+                                    <span class="star" onclick="setRating(4)">⭐</span>
+                                    <span class="star" onclick="setRating(5)">⭐</span>
+                                </div>
+                                <textarea id="feedbackComment" placeholder="Optional: Add your comment..." rows="3"></textarea>
+                                <button class="btn-submit-feedback" onclick="submitFullFeedback()">
+                                    Submit Feedback
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Share/Export -->
+                        <div class="result-actions">
+                            <button class="btn-action" onclick="shareResult()">
+                                📤 Share
+                            </button>
+                            <button class="btn-action" onclick="saveResult()">
+                                💾 Save
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Info Cards -->
+        <div class="info-section">
+            <div class="info-card">
+                <div class="info-icon">🎯</div>
+                <h3>High Accuracy</h3>
+                <p>Our model achieves 92% accuracy on test data</p>
+            </div>
+            <div class="info-card">
+                <div class="info-icon">⚡</div>
+                <h3>Instant Results</h3>
+                <p>Get predictions in milliseconds</p>
+            </div>
+            <div class="info-card">
+                <div class="info-icon">🔬</div>
+                <h3>Research-backed</h3>
+                <p>Based on NASA Kepler dataset</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Feedback Modal -->
+    <div id="feedbackModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeFeedbackModal()">&times;</span>
+            <h2>✅ Thank You!</h2>
+            <p>Your feedback helps us improve our predictions.</p>
+            <button class="btn-primary" onclick="closeFeedbackModal()">Close</button>
+        </div>
+    </div>
+
+    <script src="dashboard.js"></script>
+</body>
+</html>

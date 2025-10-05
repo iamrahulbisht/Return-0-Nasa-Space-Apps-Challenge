@@ -9,3 +9,6 @@ lightgbm
 fastapi
 uvicorn
 pydantic
+python-multipart
+catboost
+jinja2
