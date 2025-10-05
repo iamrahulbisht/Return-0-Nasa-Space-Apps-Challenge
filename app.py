@@ -17,6 +17,7 @@ model = None
 feature_columns = None
 
 def discover_feature_columns(trained_model):
+    """Discover feature names from trained model"""
     if hasattr(trained_model, "feature_names_in_"):
         return list(getattr(trained_model, "feature_names_in_"))
     if hasattr(trained_model, "feature_name_"):
@@ -32,9 +33,13 @@ def discover_feature_columns(trained_model):
     return None
 
 def check_habitability(data_dict):
+    """
+    Check if exoplanet is potentially habitable based on NASA criteria.
+    """
     reasons = []
     is_habitable = True
     
+    # Temperature check (175K - 320K for liquid water)
     teq = data_dict.get('koi_teq', 0)
     if teq < 175:
         is_habitable = False
@@ -45,6 +50,7 @@ def check_habitability(data_dict):
     else:
         reasons.append(f"Temperature: {teq:.0f}K is suitable for liquid water")
     
+    # Radius check (0.5 - 2.0 Earth radii for rocky planets)
     prad = data_dict.get('koi_prad', 0)
     if prad < 0.5:
         is_habitable = False
@@ -55,6 +61,7 @@ def check_habitability(data_dict):
     else:
         reasons.append(f"Radius: {prad:.2f}R⊕ indicates rocky composition")
     
+    # Insolation flux check (0.36 - 1.77 Earth flux)
     insol = data_dict.get('koi_insol', 0)
     if insol < 0.36:
         is_habitable = False
@@ -65,6 +72,7 @@ def check_habitability(data_dict):
     else:
         reasons.append(f"Stellar flux: {insol:.2f} in habitable zone")
     
+    # False positive flags check
     fp_sum = sum([
         data_dict.get('koi_fpflag_nt', 0),
         data_dict.get('koi_fpflag_ss', 0),
@@ -77,6 +85,7 @@ def check_habitability(data_dict):
     else:
         reasons.append("Clean detection with no quality flags")
     
+    # Add summary at the top
     if is_habitable:
         reasons.insert(0, "POTENTIALLY HABITABLE - All criteria satisfied!")
     else:
@@ -84,6 +93,7 @@ def check_habitability(data_dict):
     
     return is_habitable, reasons
 
+# Load model
 try:
     model = joblib.load("exoplanet_model.pkl")
     logger.info("✅ Model loaded successfully")
@@ -96,9 +106,11 @@ except Exception as e:
 
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
+    """Serve the HTML frontend"""
     return templates.TemplateResponse("index.html", {"request": request})
 
 def require_and_cast(body: Dict[str, Any], key: str, caster, default=None):
+    """Helper to cast and validate input fields"""
     if key not in body:
         if default is not None:
             return default
@@ -108,14 +120,12 @@ def require_and_cast(body: Dict[str, Any], key: str, caster, default=None):
     except Exception:
         raise ValueError(f"Invalid value for {key}: {body[key]}")
 
-
 PredictBody = Annotated[
     Dict[str, Any],
     Body(
         openapi_examples={
             "habitable_candidate": {
                 "summary": "Potentially Habitable Planet",
-                "description": "Earth-like planet in habitable zone",
                 "value": {
                     "koi_pdisposition": "CANDIDATE",
                     "koi_score": 0.95,
@@ -141,64 +151,6 @@ PredictBody = Annotated[
                     "dec": 45.0,
                     "koi_kepmag": 12.5
                 }
-            },
-            "hot_jupiter": {
-                "summary": "Hot Jupiter (Not Habitable)",
-                "description": "Gas giant too close to star",
-                "value": {
-                    "koi_pdisposition": "CANDIDATE",
-                    "koi_score": 0.90,
-                    "koi_fpflag_nt": 0,
-                    "koi_fpflag_ss": 0,
-                    "koi_fpflag_co": 0,
-                    "koi_fpflag_ec": 0,
-                    "koi_period": 3.0,
-                    "koi_time0bk": 125.0,
-                    "koi_impact": 0.15,
-                    "koi_duration": 2.5,
-                    "koi_depth": 8000,
-                    "koi_prad": 11.0,
-                    "koi_teq": 1500,
-                    "koi_insol": 400.0,
-                    "koi_model_snr": 85.0,
-                    "koi_tce_plnt_num": 1,
-                    "koi_tce_delivname": "q1_q16_tce",
-                    "koi_steff": 6000,
-                    "koi_slogg": 4.25,
-                    "koi_srad": 1.3,
-                    "ra": 240.0,
-                    "dec": 20.0,
-                    "koi_kepmag": 11.5
-                }
-            },
-            "false_positive": {
-                "summary": "False Positive Detection",
-                "description": "Not a real planet",
-                "value": {
-                    "koi_pdisposition": "FALSE POSITIVE",
-                    "koi_score": 0.05,
-                    "koi_fpflag_nt": 1,
-                    "koi_fpflag_ss": 1,
-                    "koi_fpflag_co": 1,
-                    "koi_fpflag_ec": 1,
-                    "koi_period": 1.2,
-                    "koi_time0bk": 100.0,
-                    "koi_impact": 0.9,
-                    "koi_duration": 0.5,
-                    "koi_depth": 50,
-                    "koi_prad": 0.5,
-                    "koi_teq": 1500,
-                    "koi_insol": 200.0,
-                    "koi_model_snr": 2.5,
-                    "koi_tce_plnt_num": 1,
-                    "koi_tce_delivname": "q1_q12_tce",
-                    "koi_steff": 6200,
-                    "koi_slogg": 3.8,
-                    "koi_srad": 2.0,
-                    "ra": 10.0,
-                    "dec": -5.0,
-                    "koi_kepmag": 18.5
-                }
             }
         }
     )
@@ -206,12 +158,14 @@ PredictBody = Annotated[
 
 @app.post("/predict")
 async def predict(payload: PredictBody):
+    """Main prediction endpoint with habitability check"""
     try:
         if model is None:
             return JSONResponse(status_code=500, content={"error": "Model not loaded"})
 
         body = payload 
         
+        # Categorical mappings
         pdisposition_mapping = {'CANDIDATE': 1, 'FALSE POSITIVE': 0}
         delivname_mapping = {
             'q1_q12_tce': 0, 'q1_q16_tce': 1,
@@ -223,6 +177,7 @@ async def predict(payload: PredictBody):
         koi_pdisposition = int(pdisposition_mapping.get(koi_pdisposition_str, 0))
         koi_tce_delivname = int(delivname_mapping.get(koi_tce_delivname_str, 1))
 
+        # Build data dictionary
         data_dict = {
             'koi_pdisposition': koi_pdisposition,
             'koi_score': float(require_and_cast(body, "koi_score", float)),
@@ -249,17 +204,22 @@ async def predict(payload: PredictBody):
             'koi_kepmag': float(require_and_cast(body, "koi_kepmag", float))
         }
 
+        # Create DataFrame for prediction
         data = pd.DataFrame([data_dict])
 
+        # Align columns to model's expected feature order
         if feature_columns is not None:
             data = data.reindex(columns=feature_columns, fill_value=0.0)
 
+        # Make prediction
         pred_raw = model.predict(data)[0]
         prediction_mapping = {0: 'FALSE POSITIVE', 1: 'CANDIDATE', 2: 'CONFIRMED'}
         koi_disposition = prediction_mapping.get(pred_raw, str(pred_raw))
 
+        # Build base response
         result = {"koi_disposition": koi_disposition}
 
+        # Check habitability ONLY for CONFIRMED or CANDIDATE planets
         if koi_disposition in ['CONFIRMED', 'CANDIDATE']:
             is_habitable, reasons = check_habitability(data_dict)
             result["is_habitable"] = is_habitable
@@ -280,10 +240,5 @@ async def predict(payload: PredictBody):
         logger.error(traceback.format_exc())
         return JSONResponse(status_code=500, content={"error": "Internal server error occurred"})
 
-# For Render deployment
+# Vercel serverless handler
 handler = app
-
-# For local testing
-# if __name__ == "__main__":
-#     import uvicorn
-#     uvicorn.run(app, host="127.0.0.1", port=8000, reload=True)
