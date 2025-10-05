@@ -1,0 +1,22 @@
+[build]
+  publish = "templates"
+
+# Serve index.html for the root
+[[redirects]]
+  from = "/"
+  to = "/index.html"
+  status = 200
+
+# Proxy API requests to your FastAPI backend
+# Replace BACKEND_BASE_URL with your deployed API base, e.g. https://your-app.onrender.com
+[[redirects]]
+  from = "/predict"
+  to = "https://BACKEND_BASE_URL/predict"
+  status = 200
+  force = true
+
+# Optional: handle SPA-style routes if you add more pages later
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
