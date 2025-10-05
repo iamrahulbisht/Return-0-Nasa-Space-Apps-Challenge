@@ -4,7 +4,6 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 import joblib
 import pandas as pd
-import uvicorn
 import logging
 import traceback
 
@@ -18,7 +17,6 @@ model = None
 feature_columns = None
 
 def discover_feature_columns(trained_model):
-    """Discover feature names from trained model"""
     if hasattr(trained_model, "feature_names_in_"):
         return list(getattr(trained_model, "feature_names_in_"))
     if hasattr(trained_model, "feature_name_"):
@@ -34,20 +32,9 @@ def discover_feature_columns(trained_model):
     return None
 
 def check_habitability(data_dict):
-    """
-    Check if exoplanet is potentially habitable based on NASA criteria.
-    Only called for CONFIRMED or CANDIDATE planets.
-    
-    Criteria:
-    - Temperature: 175K - 320K (liquid water range)
-    - Radius: 0.5 - 2.0 Earth radii (rocky planet)
-    - Stellar flux: 0.36 - 1.77 Earth flux (habitable zone)
-    - No false positive flags
-    """
     reasons = []
     is_habitable = True
     
-    # Temperature check (175K - 320K for liquid water)
     teq = data_dict.get('koi_teq', 0)
     if teq < 175:
         is_habitable = False
@@ -58,29 +45,26 @@ def check_habitability(data_dict):
     else:
         reasons.append(f"Temperature: {teq:.0f}K is suitable for liquid water")
     
-    # Radius check (0.5 - 2.0 Earth radii for rocky planets)
     prad = data_dict.get('koi_prad', 0)
     if prad < 0.5:
         is_habitable = False
         reasons.append(f"Too small: {prad:.2f}R⊕ (rocky planets: 0.5-2.0 R⊕)")
     elif prad > 2.0:
         is_habitable = False
-        reasons.append(f"Too large: {prad:.2f}R⊕ (likely a gas giant, not rocky)")
+        reasons.append(f"Too large: {prad:.2f}R⊕ (likely a gas giant)")
     else:
         reasons.append(f"Radius: {prad:.2f}R⊕ indicates rocky composition")
     
-    # Insolation flux check (0.36 - 1.77 Earth flux)
     insol = data_dict.get('koi_insol', 0)
     if insol < 0.36:
         is_habitable = False
-        reasons.append(f"Too little stellar energy: {insol:.2f} flux (habitable: 0.36-1.77)")
+        reasons.append(f"Too little stellar energy: {insol:.2f} (habitable: 0.36-1.77)")
     elif insol > 1.77:
         is_habitable = False
-        reasons.append(f"Too much stellar energy: {insol:.2f} flux (habitable: 0.36-1.77)")
+        reasons.append(f"Too much stellar energy: {insol:.2f} (habitable: 0.36-1.77)")
     else:
-        reasons.append(f"Stellar flux: {insol:.2f} places planet in habitable zone")
+        reasons.append(f"Stellar flux: {insol:.2f} in habitable zone")
     
-    # False positive flags check
     fp_sum = sum([
         data_dict.get('koi_fpflag_nt', 0),
         data_dict.get('koi_fpflag_ss', 0),
@@ -89,11 +73,10 @@ def check_habitability(data_dict):
     ])
     if fp_sum > 0:
         is_habitable = False
-        reasons.append("Detection quality concerns (false positive flags detected)")
+        reasons.append("Detection quality concerns")
     else:
         reasons.append("Clean detection with no quality flags")
     
-    # Add summary at the top
     if is_habitable:
         reasons.insert(0, "POTENTIALLY HABITABLE - All criteria satisfied!")
     else:
@@ -107,19 +90,15 @@ try:
     feature_columns = discover_feature_columns(model)
     if feature_columns is not None:
         logger.info(f"✅ Model expects {len(feature_columns)} features")
-    else:
-        logger.info("ℹ️ Using request column order")
 except Exception as e:
     logger.error(f"❌ Error loading model: {e}")
     logger.error(traceback.format_exc())
 
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
-    """Serve the HTML frontend"""
     return templates.TemplateResponse("index.html", {"request": request})
 
 def require_and_cast(body: Dict[str, Any], key: str, caster, default=None):
-    """Helper to cast and validate input fields"""
     if key not in body:
         if default is not None:
             return default
@@ -128,6 +107,7 @@ def require_and_cast(body: Dict[str, Any], key: str, caster, default=None):
         return caster(body[key])
     except Exception:
         raise ValueError(f"Invalid value for {key}: {body[key]}")
+
 
 PredictBody = Annotated[
     Dict[str, Any],
@@ -226,14 +206,12 @@ PredictBody = Annotated[
 
 @app.post("/predict")
 async def predict(payload: PredictBody):
-    """Main prediction endpoint with habitability check"""
     try:
         if model is None:
             return JSONResponse(status_code=500, content={"error": "Model not loaded"})
 
         body = payload 
         
-        # Categorical mappings
         pdisposition_mapping = {'CANDIDATE': 1, 'FALSE POSITIVE': 0}
         delivname_mapping = {
             'q1_q12_tce': 0, 'q1_q16_tce': 1,
@@ -245,7 +223,6 @@ async def predict(payload: PredictBody):
         koi_pdisposition = int(pdisposition_mapping.get(koi_pdisposition_str, 0))
         koi_tce_delivname = int(delivname_mapping.get(koi_tce_delivname_str, 1))
 
-        # Build data dictionary
         data_dict = {
             'koi_pdisposition': koi_pdisposition,
             'koi_score': float(require_and_cast(body, "koi_score", float)),
@@ -272,29 +249,23 @@ async def predict(payload: PredictBody):
             'koi_kepmag': float(require_and_cast(body, "koi_kepmag", float))
         }
 
-        # Create DataFrame for prediction
         data = pd.DataFrame([data_dict])
 
-        # Align columns to model's expected feature order
         if feature_columns is not None:
             data = data.reindex(columns=feature_columns, fill_value=0.0)
 
-        # Make prediction
         pred_raw = model.predict(data)[0]
         prediction_mapping = {0: 'FALSE POSITIVE', 1: 'CANDIDATE', 2: 'CONFIRMED'}
         koi_disposition = prediction_mapping.get(pred_raw, str(pred_raw))
 
-        # Build base response
         result = {"koi_disposition": koi_disposition}
 
-        # Check habitability ONLY for CONFIRMED or CANDIDATE planets
         if koi_disposition in ['CONFIRMED', 'CANDIDATE']:
             is_habitable, reasons = check_habitability(data_dict)
             result["is_habitable"] = is_habitable
             result["habitability_status"] = "POTENTIALLY HABITABLE" if is_habitable else "NOT HABITABLE"
             result["habitability_reasons"] = reasons
         else:
-            # FALSE POSITIVE - skip habitability analysis
             result["is_habitable"] = False
             result["habitability_status"] = "N/A"
             result["habitability_reasons"] = ["Habitability not evaluated for false positive detections"]
@@ -309,7 +280,10 @@ async def predict(payload: PredictBody):
         logger.error(traceback.format_exc())
         return JSONResponse(status_code=500, content={"error": "Internal server error occurred"})
 
-# if __name__ == "__main__":
-#     uvicorn.run(app, host="127.0.0.1", port=8000, reload=True)
+# For Render deployment
+handler = app
 
-handler=app
+# For local testing
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="127.0.0.1", port=8000, reload=True)
