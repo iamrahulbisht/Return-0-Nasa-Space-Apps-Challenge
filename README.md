@@ -33,16 +33,50 @@ This model is deployed using **FastAPI** with a simple web interface where users
 ## Dataset
 We used the **NASA Kepler Exoplanet dataset** available on Kaggle and NASA’s Open Data portal.
 
-**Main Features Used:**
-- `koi_period`
-- `koi_prad`
-- `koi_teq`
-- `koi_srad`
-- `koi_steff`
-- `koi_depth`
-- `koi_insol`
-- `koi_dor`
-- `ra`, `dec`, `koi_kepmag`
+**Disposition & Quality Metrics (3 features)**
+1. **koi_pdisposition** - Preliminary disposition (CANDIDATE / FALSE POSITIVE)
+2. **koi_score** - Disposition score (0-1, confidence level)
+3. **koi_model_snr** - Signal-to-Noise Ratio (detection quality)
+
+**False Positive Flags (4 features)**
+4. **koi_fpflag_nt** - Not Transit-Like flag (0 or 1)
+5. **koi_fpflag_ss** - Stellar Eclipse flag (0 or 1)
+6. **koi_fpflag_co** - Centroid Offset flag (0 or 1)
+7. **koi_fpflag_ec** - Ephemeris Match Indicates Contamination flag (0 or 1)
+
+**Transit Parameters (5 features)**
+8. **koi_period** - Orbital period (days)
+9. **koi_time0bk** - Transit epoch (BKJD - Barycentric Kepler Julian Date)
+10. **koi_impact** - Impact parameter (closest approach to star center)
+11. **koi_duration** - Transit duration (hours)
+12. **koi_depth** - Transit depth (parts per million - ppm)
+
+**Planetary Properties (3 features)**
+13. **koi_prad** - Planet radius (Earth radii R⊕)
+14. **koi_teq** - Equilibrium temperature (Kelvin)
+15. **koi_insol** - Insolation flux (Earth flux units)
+
+**Stellar Properties (3 features)**
+16. **koi_steff** - Stellar effective temperature (Kelvin)
+17. **koi_slogg** - Stellar surface gravity (log g, cgs units)
+18. **koi_srad** - Stellar radius (Solar radii R☉)
+
+**Position & Catalog Data (5 features)**
+19. **ra** - Right Ascension (degrees, sky position)
+20. **dec** - Declination (degrees, sky position)
+21. **koi_kepmag** - Kepler magnitude (brightness)
+22. **koi_tce_plnt_num** - TCE planet number
+23. **koi_tce_delivname** - TCE delivery name (data release version)
+
+
+## **Key Features for Habitability Assessment**
+
+From these 23 features, **3 critical ones** determine habitability:
+1. **koi_teq** (175-320K) - Temperature for liquid water
+2. **koi_prad** (0.5-2.0 R⊕) - Rocky planet size
+3. **koi_insol** (0.36-1.77) - Habitable zone energy
+
+Plus all **fp_flags must = 0** for clean detection.
 
 ---
 
