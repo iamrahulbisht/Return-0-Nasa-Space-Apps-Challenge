@@ -4,6 +4,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 import joblib
 import pandas as pd
+import uvicorn
 import logging
 import traceback
 
@@ -308,5 +309,7 @@ async def predict(payload: PredictBody):
         logger.error(traceback.format_exc())
         return JSONResponse(status_code=500, content={"error": "Internal server error occurred"})
 
-# Vercel serverless handler
-handler = app
+# if __name__ == "__main__":
+#     uvicorn.run(app, host="127.0.0.1", port=8000, reload=True)
+
+handler=app
